@@ -1,6 +1,7 @@
 import os
 import mimetypes
 from os.path import normcase, normpath, join, exists
+import hashlib
 
 from pkg_resources import resource_exists, resource_filename
 from repoze.lru import lru_cache
@@ -23,7 +24,7 @@ class AssetView(object):
     If not found, the file is directly served. If a template extension
     is found, it is rendered then served"""
 
-    def __init__(self, path_spec):
+    def __init__(self, path_spec, get_username=None):
         if ':' not in path_spec:
             raise AssetViewConfigurationError("Must specify full package name in add_asset_view (mypackage:path)")
 
@@ -31,13 +32,28 @@ class AssetView(object):
         self.package_name = package_name
         self.docroot = docroot
         self.norm_docroot = normcase(normpath(docroot))
+        if get_username is not None:
+            self._get_username = get_username
 
-    def _get_cache_key(self, region, key, request):
+    def _get_username(self, request):
+        raise NotImplementedError("Must supply a callable to __init__'s get_username argument")
+
+    def _get_cache_key(self, request):
+        region = request.matchdict['cache_region']
+
+        subpath = request.matchdict['subpath']
+        query_string = request.query_string
+
+        cache_key = '%s%s%s' % (self.package_name, subpath, query_string)
+        cache_key = hashlib.md5(cache_key).hexdigest()
+
         if region == 'global':
-            return 'cache:global:%s' % key
+            return 'cache:global:%s' % cache_key
         elif region == 'user':
-            username = request.session.get('Auth', {}).get('username', '__guest__')
-            return 'cache:user:%s:%s' % (username, key)
+            username = self._get_username(request)
+            if username is None:
+                username = '__guest'
+            return 'cache:user:%s:%s' % (username, cache_key)
         else:
             raise AssetViewCacheError("Unconfigured cache region: %s" % (region))
 
@@ -47,9 +63,14 @@ class AssetView(object):
         subpath = request.matchdict['subpath']
         subpath = _secure_path(request.matchdict['subpath'])
 
+        cache_key = self._get_cache_key(request)
+
         if subpath is None:
             return HTTPNotFound('Out of bounds: %s' % subpath)
 
+        return self._generate(subpath, request)
+
+    def _generate(self, subpath, request):
         render = False
         if self.package_name: # package resource
             resource_path = '%s/%s' % (self.docroot.rstrip('/'), subpath)

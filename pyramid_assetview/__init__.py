@@ -40,15 +40,13 @@ class AssetURLInfo(object):
 
         for (reg_asset_spec, route_name) in self._get_registrations(registry):
             if asset_spec == reg_asset_spec:
-                return request.route_url(route_name, cache_region=cache_region, subpath=path)
+                return request.route_url(route_name, cache_region=cache_region, subpath=path, **kw)
 
         raise ValueError('No asset URL definition matching %s:%s' % (asset_spec, path))
 
     def add(self, config, asset_spec, path_spec, **extras):
         route_name = '__assets_%s ' % asset_spec
         pattern = '/__assets/%s/{cache_region}/*subpath' % (asset_spec)
-
-        print '%s -> %s' % (asset_spec, path_spec)
 
         # Hardcoded for now
         if extras.pop('permission', None) is not None:
@@ -60,7 +58,9 @@ class AssetURLInfo(object):
         if extras.pop('attr', None) is not None:
             raise Exception("'attr' kwarg is not supported by add_asset_view()")
 
-        assetview = AssetView(path_spec)
+        get_username = extras.pop('get_username', None)
+
+        assetview = AssetView(path_spec, get_username=get_username)
 
         config.add_route(route_name, pattern, **extras)
         config.add_view(route_name=route_name,
@@ -73,7 +73,7 @@ class AssetURLInfo(object):
 
         config.action(None, callable=register)
 
-def request_asset_url(self, asset_spec, path, cache_region, **kw):
+def request_asset_url(self, asset_spec, path, cache_region='global', **kw):
     try:
         reg = self.registry
     except AttributeError:
