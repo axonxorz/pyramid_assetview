@@ -1,0 +1,31 @@
+A Beaker backend utilizing Redis.
+
+The backend supports multiple application session 'namespaces', different
+from Beaker's notion of a namespace.
+
+The local application namespace is specified with the 'localnamespace'
+setting. The backend will also implicitly load the 'Auth' namespace.
+Additional namespaces can be configured with the namespaces setting as
+a newline-separated string.
+
+For the following namespace configuration:
+
+locationamespace = MyApp
+namespaces = TestNS
+             Global
+
+, the session will look as follows:
+
+{'Auth': {<contents>},
+ 'TestNS': {<contents>},
+ 'Global': {<contents>},
+ 'member1': <contents>,
+ 'member2': <contents>,
+ 'member3': <contents>,
+ }
+
+member1, member2, member3 are in the 'localnamespace', and can be
+accessed without a namespace qualifier.
+
+No protection for overwriting other namespaces is built-in. eg: If you
+clobber the 'Global' key, it will be persisted in the session as-is.
