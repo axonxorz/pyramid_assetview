@@ -6,7 +6,7 @@ import hashlib
 from pkg_resources import resource_exists, resource_filename
 from repoze.lru import lru_cache
 
-from pyramid.httpexceptions import HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound, HTTPNotModified
 
 from pyramid.events import NewRequest
 from pyramid.response import FileResponse
@@ -63,14 +63,14 @@ class AssetView(object):
         subpath = request.matchdict['subpath']
         subpath = _secure_path(request.matchdict['subpath'])
 
-        cache_key = self._get_cache_key(request)
+        #cache_key = self._get_cache_key(request)
 
         if subpath is None:
             return HTTPNotFound('Out of bounds: %s' % subpath)
 
-        return self._generate(subpath, request)
+        return self._generate(subpath, cache_region, request)
 
-    def _generate(self, subpath, request):
+    def _generate(self, subpath, cache_region, request):
         render = False
         if self.package_name: # package resource
             resource_path = '%s/%s' % (self.docroot.rstrip('/'), subpath)
@@ -89,9 +89,17 @@ class AssetView(object):
         if not render:
             return FileResponse(filepath, request)
         else:
+            # Handle ETag
+            cache_stat = os.stat(filepath)
+
+            cache_etag = '%s-%s' % (cache_region, cache_stat.st_mtime)
+            if cache_etag == str(request.if_none_match).strip('"'):
+                return HTTPNotModified()
+
             renderpath = '%s:%s' % (self.package_name, resource_path)
             response = render_to_response(renderpath, {}, request=request)
             response.content_type, response.content_encoding = mimetypes.guess_type(filepath, strict=False)
+            response.etag = cache_etag
             return response
 
 slash = '/'
