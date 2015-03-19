@@ -70,6 +70,17 @@ class AssetView(object):
 
         return self._generate(subpath, cache_region, request)
 
+    @staticmethod
+    def guess_mime(filename):
+        """Guess the mime-type of a filename, with hardcodes for JS and CSS"""
+        if filename.endswith('.js'):
+            return 'application/javascript'
+        elif filename.endswith('.css'):
+            return 'text/css'
+        else:
+            type, encoding = mimetypes.guess_type(filename)
+            return type
+
     def _generate(self, subpath, cache_region, request):
         render = False
         if self.package_name: # package resource
@@ -85,9 +96,13 @@ class AssetView(object):
 
         if resource_path.endswith('.mak'):
             render = True
+            # Mime name, without the .mak
+            mime_name = resource_path[:-4]
+        else:
+            mime_name = resource_path
 
         if not render:
-            return FileResponse(filepath, request)
+            return FileResponse(filepath, request, content_type=self.guess_mime(mime_name))
         else:
             # Handle ETag
             cache_stat = os.stat(filepath)
@@ -98,7 +113,7 @@ class AssetView(object):
 
             renderpath = '%s:%s' % (self.package_name, resource_path)
             response = render_to_response(renderpath, {}, request=request)
-            response.content_type, response.content_encoding = mimetypes.guess_type(filepath, strict=False)
+            response.content_type = self.guess_mime(mime_name)
             response.etag = cache_etag
             return response
 
