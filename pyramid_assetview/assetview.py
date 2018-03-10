@@ -132,22 +132,6 @@ class AssetView(object):
                     resource_path += '.mak'
                 return self._serve_maybe_rendered(resource_path, cache_region, request)
 
-        if not render:
-            return FileResponse(filepath, request, content_type=self.guess_mime(mime_name))
-        else:
-            # Handle ETag
-            cache_stat = os.stat(filepath)
-
-            cache_etag = '%s-%s' % (cache_region, cache_stat.st_mtime)
-            if cache_etag == str(request.if_none_match).strip('"'):
-                return HTTPNotModified()
-
-            renderpath = '%s:%s' % (self.package_name, resource_path)
-            response = render_to_response(renderpath, {}, request=request)
-            response.content_type = self.guess_mime(mime_name)
-            response.etag = cache_etag
-            return response
-
 slash = '/'
 
 _seps = set(['/', os.sep])
