@@ -59,8 +59,8 @@ class AssetURLInfo(object):
             raise Exception("'attr' kwarg is not supported by add_asset_view()")
 
         get_username = extras.pop('get_username', None)
-
-        assetview = AssetView(path_spec, get_username=get_username)
+        package_name = extras.pop('package_name', None)
+        assetview = AssetView(path_spec, package_name=package_name, get_username=get_username)
 
         config.add_route(route_name, pattern, **extras)
         config.add_view(route_name=route_name,

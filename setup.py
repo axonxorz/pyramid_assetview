@@ -13,7 +13,7 @@ requires = [
     ]
 
 setup(name='pyramid_assetview',
-      version='0.2',
+      version='0.3',
       description='Rendered views for Pyramid with templating/caching',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
