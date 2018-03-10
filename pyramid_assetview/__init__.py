@@ -1,4 +1,3 @@
-from types import MethodType
 import urlparse
 
 from zope.interface import (
@@ -6,7 +5,6 @@ from zope.interface import (
     implementer
     )
 
-from pyramid.events import NewRequest
 from pyramid.threadlocal import get_current_registry
 
 from .interfaces import IAssetURLInfo
@@ -108,10 +106,7 @@ def request_asset_path(self, asset_spec, path, **kw):
 
     return info.get_path(asset_spec, path, self, **kw)
 
-def add_asset_url_callables(event):
-    event.request.asset_url = MethodType(request_asset_url, event.request)
-    event.request.asset_path = MethodType(request_asset_path, event.request)
-
 def includeme(config):
     config.add_directive('add_asset_view', add_asset_view)
-    config.add_subscriber(add_asset_url_callables, NewRequest)
+    config.add_request_method(request_asset_url, name='asset_url')
+    config.add_request_method(request_asset_path, name='asset_path')
