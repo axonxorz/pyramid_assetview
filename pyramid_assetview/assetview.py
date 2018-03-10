@@ -61,18 +61,19 @@ class AssetView(object):
         else:
             raise AssetViewCacheError("Unconfigured cache region: %s" % (region))
 
-    def __call__(self, context, request):
+    def __call__(self, context, request, **kw):
         cache_region = request.matchdict['cache_region']
 
-        subpath = request.matchdict['subpath']
         subpath = _secure_path(request.matchdict['subpath'])
-
-        #cache_key = self._get_cache_key(request)
-
         if subpath is None:
             return HTTPNotFound('Out of bounds: %s' % subpath)
 
         return self._generate(subpath, cache_region, request)
+
+    def get_path(self, subpath, request, **kw):
+        subpath = _secure_path(tuple(subpath.split('/')))
+        resource_path = '%s/%s' % (self.docroot.rstrip('/'), subpath)
+        return resource_path
 
     @staticmethod
     def guess_mime(filename):
@@ -119,7 +120,6 @@ class AssetView(object):
             return response
 
     def _generate(self, subpath, cache_region, request):
-        render = False
         if self.package_name: # package resource
             resource_path = '%s/%s' % (self.docroot.rstrip('/'), subpath)
             if resource_path.startswith('/'):
@@ -131,6 +131,8 @@ class AssetView(object):
                     # Support rendering for Mako templates
                     resource_path += '.mak'
                 return self._serve_maybe_rendered(resource_path, cache_region, request)
+        else:
+            raise NotImplementedError('AssetView.package_name not specified, not generating a response')
 
 slash = '/'
 

@@ -32,15 +32,28 @@ class AssetURLInfo(object):
             reg = registry._asset_url_registrations = []
         return reg
 
-    def generate(self, asset_spec, path, cache_region, request, **kw):
+    def generate_url(self, asset_spec, path, cache_region, request, **kw):
         try:
             registry = request.registry
         except AttributeError: # b/w compat (for tests)
             registry = get_current_registry()
 
-        for (reg_asset_spec, route_name) in self._get_registrations(registry):
+        for (reg_asset_spec, route_name, view) in self._get_registrations(registry):
             if asset_spec == reg_asset_spec:
                 return request.route_url(route_name, cache_region=cache_region, subpath=path, **kw)
+
+        raise ValueError('No asset URL definition matching %s:%s' % (asset_spec, path))
+
+    def get_path(self, asset_spec, path, request, **kw):
+        try:
+            registry = request.registry
+        except AttributeError: # b/w compat (for tests)
+            registry = get_current_registry()
+
+        for (reg_asset_spec, route_name, view) in self._get_registrations(registry):
+            if asset_spec == reg_asset_spec:
+                print 'specified path', path
+                return view.get_path(subpath=path, request=request, **kw)
 
         raise ValueError('No asset URL definition matching %s:%s' % (asset_spec, path))
 
@@ -68,8 +81,7 @@ class AssetURLInfo(object):
 
         def register():
             registrations = self._get_registrations(config.registry)
-
-            registrations.append((asset_spec, route_name))
+            registrations.append((asset_spec, route_name, assetview))
 
         config.action(None, callable=register)
 
@@ -81,13 +93,26 @@ def request_asset_url(self, asset_spec, path, cache_region='global', **kw):
 
     info = reg.queryUtility(IAssetURLInfo)
     if info is None:
-        raise ValueError("No asset URL definition matching %s" % (location, path, cache_region))
+        raise ValueError('No AssetURLInfo instance registered. No calls to config.add_asset_view() have been made')
 
-    return info.generate(asset_spec, path, cache_region, self, **kw)
+    return info.generate_url(asset_spec, path, cache_region, self, **kw)
 
-def add_asset_url_callable(event):
+def request_asset_path(self, asset_spec, path, **kw):
+    try:
+        reg = self.registry
+    except AttributeError:
+        reg = get_current_registry()
+
+    info = reg.queryUtility(IAssetURLInfo)
+    if info is None:
+        raise ValueError('No AssetURLInfo instance registered. No calls to config.add_asset_view() have been made')
+
+    return info.get_path(asset_spec, path, self, **kw)
+
+def add_asset_url_callables(event):
     event.request.asset_url = MethodType(request_asset_url, event.request)
+    event.request.asset_path = MethodType(request_asset_path, event.request)
 
 def includeme(config):
     config.add_directive('add_asset_view', add_asset_view)
-    config.add_subscriber(add_asset_url_callable, NewRequest)
+    config.add_subscriber(add_asset_url_callables, NewRequest)
