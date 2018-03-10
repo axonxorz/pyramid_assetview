@@ -52,7 +52,6 @@ class AssetURLInfo(object):
 
         for (reg_asset_spec, route_name, view) in self._get_registrations(registry):
             if asset_spec == reg_asset_spec:
-                print 'specified path', path
                 return view.get_path(subpath=path, request=request, **kw)
 
         raise ValueError('No asset URL definition matching %s:%s' % (asset_spec, path))
