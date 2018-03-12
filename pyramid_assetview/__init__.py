@@ -55,7 +55,7 @@ class AssetURLInfo(object):
         raise ValueError('No asset URL definition matching %s:%s' % (asset_spec, path))
 
     def add(self, config, asset_spec, path_spec, **extras):
-        route_name = '__assets_%s ' % asset_spec
+        route_name = '__assets_%s' % asset_spec
         pattern = '/__assets/%s/{cache_region}/*subpath' % (asset_spec)
 
         # Hardcoded for now
