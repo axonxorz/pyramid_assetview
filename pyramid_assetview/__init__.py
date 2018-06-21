@@ -9,6 +9,7 @@ from pyramid.threadlocal import get_current_registry
 
 from .interfaces import IAssetURLInfo
 from .assetview import AssetView
+from .etag import FileModTimeEtagger
 
 urljoin = urlparse.urljoin
 url_parse = urlparse.urlparse
@@ -19,6 +20,7 @@ def add_asset_view(config, asset_spec, path_spec, **extras):
         info = AssetURLInfo()
         config.registry.registerUtility(info, IAssetURLInfo)
     info.add(config, asset_spec, path_spec, **extras)
+
 
 @implementer(IAssetURLInfo)
 class AssetURLInfo(object):
@@ -68,9 +70,13 @@ class AssetURLInfo(object):
         if extras.pop('attr', None) is not None:
             raise Exception("'attr' kwarg is not supported by add_asset_view()")
 
+        etag_impl = extras.pop('etag', None)
+        if etag_impl is None:
+            etag_impl = FileModTimeEtagger()
+
         get_username = extras.pop('get_username', None)
         package_name = extras.pop('package_name', None)
-        assetview = AssetView(path_spec, package_name=package_name, get_username=get_username)
+        assetview = AssetView(path_spec, package_name=package_name, get_username=get_username, etag=etag_impl)
 
         config.add_route(route_name, pattern, **extras)
         config.add_view(route_name=route_name,

@@ -10,3 +10,10 @@ class IAssetURLInfo(Interface):
 
     def generate(asset_spec, path, cache_region, request, **kw):
         """Generate a URL for the given path"""
+
+
+class IEtagger(Interface):
+    """A class that generates an HTTP ETag header value for a given asset resource"""
+
+    def __call__(self, resource_path, cache_region, file_path, request):
+        """Generate a value for the HTTP ETag header, or None if no header should be configured"""

@@ -14,6 +14,8 @@ from pyramid.renderers import render_to_response
 from pyramid.asset import resolve_asset_spec
 from pyramid.path import caller_package
 
+from .etag import FileModTimeEtagger
+
 class AssetViewCacheError(Exception): pass
 
 class AssetViewConfigurationError(Exception): pass
@@ -24,7 +26,7 @@ class AssetView(object):
     If not found, the file is directly served. If a template extension
     is found, it is rendered then served"""
 
-    def __init__(self, path_spec, get_username=None, package_name=None):
+    def __init__(self, path_spec, get_username=None, package_name=None, etag=None):
         if ':' not in path_spec and package_name is None:
             raise AssetViewConfigurationError("Must specify full package name in add_asset_view (mypackage:path) or "
                                               "provide the package_name argument")
@@ -38,6 +40,7 @@ class AssetView(object):
         self.norm_docroot = normcase(normpath(docroot))
         if get_username is not None:
             self._get_username = get_username
+        self.etagger = etag
 
     def _get_username(self, request):
         raise NotImplementedError("Must supply a callable to __init__'s get_username argument")
@@ -86,12 +89,18 @@ class AssetView(object):
             type, encoding = mimetypes.guess_type(filename)
             return type
 
-    def _serve_raw(self, file_path, request):
+    def _serve_raw(self, resource_path, cache_region, file_path, request):
         """Serve a raw filesystem path, no rendering possible."""
         mime_name = file_path
         if not os.path.exists(file_path):
             return HTTPNotFound(request.url)
-        return FileResponse(file_path, request, content_type=self.guess_mime(mime_name))
+        response = FileResponse(file_path, request, content_type=self.guess_mime(mime_name))
+        response.last_modified = None  # This calculated value may be meaningless, don't rely on it
+        etag = None
+        if callable(self.etagger):
+            etag = self.etagger(resource_path, cache_region, file_path, request)
+        response.etag = etag
+        return response
 
     def _serve_maybe_rendered(self, resource_path, cache_region, request):
         """Service a package resource file, rendered if applicable, raw if otherwise."""
@@ -105,18 +114,21 @@ class AssetView(object):
 
         file_path = resource_filename(self.package_name, resource_path)
         if not render:
-            return self._serve_raw(file_path, request)
+            return self._serve_raw(resource_path, cache_region, file_path, request)
         else:
             # Handle ETag & Caching
-            cache_stat = os.stat(file_path)
-            cache_etag = '%s-%s' % (cache_region, cache_stat.st_mtime)
-            if cache_etag == str(request.if_none_match).strip('"'):
+            etag = None
+            if callable(self.etagger):
+                etag = self.etagger(resource_path, cache_region, file_path, request)
+
+            if etag is not None and etag == str(request.if_none_match).strip('"'):
                 return HTTPNotModified()
 
             renderpath = '%s:%s' % (self.package_name, resource_path)
             response = render_to_response(renderpath, {}, request=request)
+            response.last_modified = None  # This calculated value may be meaningless, don't rely on it
             response.content_type = self.guess_mime(mime_name)
-            response.etag = cache_etag
+            response.etag = etag
             return response
 
     def _generate(self, subpath, cache_region, request):
