@@ -137,7 +137,7 @@ class AssetView(object):
             if resource_path.startswith('/'):
                 # Special case for absolute filenames. Used if AssetView is serving directly from a filesystem
                 # path, instead of using a python package reference
-                return self._serve_raw(resource_path, request)
+                return self._serve_raw(resource_path, cache_region, resource_path, request)
             else:
                 if resource_exists(self.package_name, resource_path + '.mak'):
                     # Support rendering for Mako templates
