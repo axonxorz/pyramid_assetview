@@ -10,12 +10,21 @@ from interfaces import IEtagger
 @implementer(IEtagger)
 class BaseEtagger(object):
 
+    def __init__(self, include_cache_region=True):
+        self.include_cache_region = include_cache_region
+
     def __call__(self, resource_path, cache_region, file_path, request):
+        token = self.tokenize(resource_path, cache_region, file_path, request)
+        if self.include_cache_region:
+            return '{}-{}'.format(cache_region, token)
+        else:
+            return token
+
+    def tokenize(self, resource_path, cache_region, file_path, request):
         raise NotImplementedError()
 
 
 class FileModTimeEtagger(BaseEtagger):
 
-    def __call__(self, resource_path, cache_region, file_path, request):
-        cache_stat = os.stat(file_path)
-        return '%s-%s' % (cache_region, cache_stat.st_mtime)
+    def tokenize(self, resource_path, cache_region, file_path, request):
+        return str(os.stat(file_path).st_mtime)
