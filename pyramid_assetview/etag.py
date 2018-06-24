@@ -28,3 +28,13 @@ class FileModTimeEtagger(BaseEtagger):
 
     def tokenize(self, resource_path, cache_region, file_path, request):
         return str(os.stat(file_path).st_mtime)
+
+
+class StaticValueEtagger(BaseEtagger):
+
+    def __init__(self, value, include_cache_region=True):
+        super(StaticValueEtagger, self).__init__(include_cache_region=include_cache_region)
+        self.value = value
+
+    def tokenize(self, resource_path, cache_region, file_path, request):
+        return self.value
