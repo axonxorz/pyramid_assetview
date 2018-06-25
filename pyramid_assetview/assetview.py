@@ -26,7 +26,7 @@ class AssetView(object):
     If not found, the file is directly served. If a template extension
     is found, it is rendered then served"""
 
-    def __init__(self, path_spec, get_username=None, package_name=None, etag=None):
+    def __init__(self, path_spec, get_username=None, package_name=None, etag=None, cache_max_age=3600):
         if ':' not in path_spec and package_name is None:
             raise AssetViewConfigurationError("Must specify full package name in add_asset_view (mypackage:path) or "
                                               "provide the package_name argument")
@@ -41,6 +41,7 @@ class AssetView(object):
         if get_username is not None:
             self._get_username = get_username
         self.etagger = etag
+        self.cache_max_age = cache_max_age
 
     def _get_username(self, request):
         raise NotImplementedError("Must supply a callable to __init__'s get_username argument")
@@ -100,6 +101,8 @@ class AssetView(object):
         if callable(self.etagger):
             etag = self.etagger(resource_path, cache_region, file_path, request)
         response.etag = etag
+        if self.cache_max_age:
+            response.cache_expires = self.cache_max_age
         return response
 
     def _serve_maybe_rendered(self, resource_path, cache_region, request):
@@ -129,6 +132,8 @@ class AssetView(object):
             response.last_modified = None  # This calculated value may be meaningless, don't rely on it
             response.content_type = self.guess_mime(mime_name)
             response.etag = etag
+            if self.cache_max_age:
+                response.cache_expires = self.cache_max_age
             return response
 
     def _generate(self, subpath, cache_region, request):
