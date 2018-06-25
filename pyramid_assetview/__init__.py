@@ -9,7 +9,6 @@ from pyramid.threadlocal import get_current_registry
 
 from .interfaces import IAssetURLInfo
 from .assetview import AssetView
-from .etag import FileModTimeEtagger
 
 urljoin = urlparse.urljoin
 url_parse = urlparse.urlparse
@@ -71,8 +70,6 @@ class AssetURLInfo(object):
             raise Exception("'attr' kwarg is not supported by add_asset_view()")
 
         etag_impl = extras.pop('etag', None)
-        if etag_impl is None:
-            etag_impl = FileModTimeEtagger()
 
         get_username = extras.pop('get_username', None)
         package_name = extras.pop('package_name', None)
