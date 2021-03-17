@@ -1,4 +1,4 @@
-import urlparse
+from six.moves import urllib
 
 from zope.interface import (
     Interface,
@@ -10,8 +10,8 @@ from pyramid.threadlocal import get_current_registry
 from .interfaces import IAssetURLInfo
 from .assetview import AssetView
 
-urljoin = urlparse.urljoin
-url_parse = urlparse.urlparse
+urljoin = urllib.parse.urljoin
+url_parse = urllib.parse.urlparse
 
 def add_asset_view(config, asset_spec, path_spec, **extras):
     info = config.registry.queryUtility(IAssetURLInfo)

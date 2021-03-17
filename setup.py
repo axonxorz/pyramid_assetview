@@ -4,18 +4,18 @@ import sys
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open('README', 'rb').read()
-CHANGES = open('CHANGES', 'rb').read()
+description = 'Rendered views for Pyramid with templating/caching'
 
 requires = [
     'pyramid>=1.3',
-    'repoze.lru>=0.4'
+    'repoze.lru>=0.4',
+    'six'
     ]
 
 setup(name='pyramid_assetview',
-      version='0.3.7',
-      description='Rendered views for Pyramid with templating/caching',
-      long_description=README + '\n\n' +  CHANGES,
+      version='0.4.0',
+      description=description,
+      long_description=description,
       classifiers=[
         "Programming Language :: Python",
         "Framework :: Pylons",

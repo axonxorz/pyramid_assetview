@@ -4,7 +4,7 @@ from zope.interface import (
     implementer
     )
 
-from interfaces import IEtagger
+from .interfaces import IEtagger
 
 
 @implementer(IEtagger)
